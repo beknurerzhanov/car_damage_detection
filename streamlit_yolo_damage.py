@@ -1,6 +1,5 @@
 import os
 import io
-import cv2
 import torch
 import numpy as np
 import streamlit as st
@@ -11,13 +10,13 @@ from ultralytics import YOLO
 
 st.set_page_config(page_title="Car Damage", layout="wide")
 
-# --- ЖЁСТКО: используем только best_saved.pt, лежащий рядом с этим файлом ---
+# Жёстко используем модель рядом с файлом
 MODEL_PATH = str(Path(__file__).with_name("best_saved.pt"))
 if not os.path.exists(MODEL_PATH):
     st.error(f"Файл модели не найден: {MODEL_PATH}")
     st.stop()
 
-# Параметры (если хочешь — поменяй дефолты ниже)
+# Параметры
 CONF = st.sidebar.slider("Confidence", 0.05, 0.9, 0.25, 0.01)
 IOU  = st.sidebar.slider("IoU (NMS)", 0.2, 0.9, 0.45, 0.01)
 IMGSZ = st.sidebar.slider("imgsz", 320, 1280, 640, 32)
@@ -44,7 +43,6 @@ def class_names():
 NAMES = class_names()
 
 st.title("🚗🔧 YOLOv8 детекция повреждений")
-st.caption("Загрузи 1 или несколько картинок. Получишь аннотированное изображение и счётчик по классам.")
 
 def run_on_image(pil_img: Image.Image):
     img_np = np.array(pil_img.convert("RGB"))
@@ -52,8 +50,9 @@ def run_on_image(pil_img: Image.Image):
         source=img_np, imgsz=IMGSZ, conf=CONF, iou=IOU, device=DEVICE, verbose=False
     )
     r = results[0]
-    annotated = r.plot()  # BGR
-    annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+    # r.plot() -> BGR ndarray; конвертируем в RGB без OpenCV
+    annotated_bgr = r.plot()
+    annotated_rgb = annotated_bgr[:, :, ::-1]  # BGR -> RGB
     cls_ids = r.boxes.cls.cpu().numpy().astype(int) if r.boxes is not None else []
     return annotated_rgb, Counter(cls_ids)
 
@@ -75,11 +74,11 @@ if uploads:
         col1, col2 = st.columns([2,1], vertical_alignment="top")
         img = Image.open(up)
         with st.spinner(f"Инференс: {up.name}"):
-            annotated, counter = run_on_image(img)
+            annotated_rgb, counter = run_on_image(img)
         with col1:
-            st.image(annotated, caption=f"Аннотированное — {up.name}", use_column_width=True)
+            st.image(annotated_rgb, caption=f"Аннотированное — {up.name}", use_column_width=True)
             buf = io.BytesIO()
-            Image.fromarray(annotated).save(buf, format="JPEG", quality=90); buf.seek(0)
+            Image.fromarray(annotated_rgb).save(buf, format="JPEG", quality=90); buf.seek(0)
             st.download_button("⬇️ Скачать", data=buf,
                                file_name=f"annotated_{up.name}.jpg", mime="image/jpeg")
         with col2:
