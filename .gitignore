@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.ipynb_checkpoints/
+
+# Venv
+.venv/
+venv/
+env/
+
+# OS/IDE
+.DS_Store
+.vscode/
+
+# Big/derived
+runs/
+*.mp4
