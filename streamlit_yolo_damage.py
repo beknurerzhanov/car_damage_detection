@@ -43,7 +43,7 @@ def get_class_names():
 
 NAMES = get_class_names()
 
-st.title("🚗🔧 YOLOv8 детекция повреждений")
+st.title("🚗🔧 YOLOv8 детекция повреждений вмятины")
 
 def run_on_image(pil_img: Image.Image):
     img_np = np.array(pil_img.convert("RGB"))
@@ -99,3 +99,4 @@ if uploads:
             st.markdown(counts_md(counter))
 
     st.caption(f"Параметры: imgsz={IMGSZ}, conf={CONF}, iou={IOU}")
+
