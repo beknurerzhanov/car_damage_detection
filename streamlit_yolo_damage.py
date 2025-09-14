@@ -29,7 +29,8 @@ def load_model():
 
 model = load_model()
 
-def class_names():
+@st.cache_data(show_spinner=False)
+def get_class_names():
     try:
         names = model.model.names if hasattr(model, "model") else model.names
         if isinstance(names, dict):
@@ -40,7 +41,7 @@ def class_names():
         pass
     return None
 
-NAMES = class_names()
+NAMES = get_class_names()
 
 st.title("🚗🔧 YOLOv8 детекция повреждений")
 
@@ -57,7 +58,8 @@ def run_on_image(pil_img: Image.Image):
     return annotated_rgb, Counter(cls_ids)
 
 def counts_md(counter: Counter):
-    if not counter: return "Ничего не найдено."
+    if not counter:
+        return "Ничего не найдено."
     lines = []
     for cid, cnt in sorted(counter.items()):
         label = NAMES[cid] if NAMES and cid < len(NAMES) else str(cid)
@@ -71,17 +73,29 @@ uploads = st.file_uploader(
 if uploads:
     for up in uploads:
         st.divider()
-        col1, col2 = st.columns([2,1], vertical_alignment="top")
-        img = Image.open(up)
+        col1, col2 = st.columns([2, 1], vertical_alignment="top")
+        try:
+            img = Image.open(up)
+        except Exception as e:
+            st.error(f"Не удалось открыть файл {up.name}: {e}")
+            continue
+
         with st.spinner(f"Инференс: {up.name}"):
-            annotated_rgb, counter = run_on_image(img)
+            try:
+                annotated_rgb, counter = run_on_image(img)
+            except Exception as e:
+                st.error(f"Ошибка инференса на {up.name}: {e}")
+                continue
+
         with col1:
-            st.image(annotated_rgb, caption=f"Аннотированное — {up.name}", use_column_width=True)
+            st.image(annotated_rgb, caption=f"Аннотированное — {up.name}", use_container_width=True)
             buf = io.BytesIO()
-            Image.fromarray(annotated_rgb).save(buf, format="JPEG", quality=90); buf.seek(0)
+            Image.fromarray(annotated_rgb).save(buf, format="JPEG", quality=90)
+            buf.seek(0)
             st.download_button("⬇️ Скачать", data=buf,
                                file_name=f"annotated_{up.name}.jpg", mime="image/jpeg")
         with col2:
             st.subheader("Статистика по классам")
             st.markdown(counts_md(counter))
+
     st.caption(f"Параметры: imgsz={IMGSZ}, conf={CONF}, iou={IOU}")
