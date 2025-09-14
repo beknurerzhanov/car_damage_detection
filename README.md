@@ -1,4 +1,4 @@
-Car Dent Detection (YOLOv8 + Streamlit)
+Car Dent Detection (YOLOv8s + Streamlit)
 
 Веб-приложение на Streamlit для детекции повреждений автомобиля на изображениях с помощью обученной модели YOLOv8.
 
